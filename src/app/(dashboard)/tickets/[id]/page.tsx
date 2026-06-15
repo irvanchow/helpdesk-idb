@@ -31,6 +31,9 @@ import {
   Send,
   Lock,
   FileText,
+  Paperclip,
+  ImageIcon,
+  Download,
 } from "lucide-react";
 
 interface Comment {
@@ -43,6 +46,14 @@ interface Comment {
     name: string;
     role: string;
   };
+}
+
+interface Attachment {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
 }
 
 interface Ticket {
@@ -64,6 +75,7 @@ interface Ticket {
   assignedTo: { id: string; name: string; email: string } | null;
   onBehalfOf: { id: string; name: string; email: string } | null;
   comments: Comment[];
+  attachments: Attachment[];
 }
 
 const statusConfig: Record<string, { bg: string; text: string; dot: string; label: string }> = {
@@ -277,6 +289,51 @@ export default function TicketDetailPage() {
               <p className="text-sm text-[#1E293B] whitespace-pre-wrap leading-relaxed">
                 {ticket.description}
               </p>
+
+              {ticket.attachments && ticket.attachments.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-[#E2E8F0]">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    Lampiran ({ticket.attachments.length})
+                  </p>
+                  <div className="space-y-2">
+                    {ticket.attachments.map((att) => {
+                      const isImage = att.mimeType.startsWith("image/");
+                      return (
+                        <div key={att.id}>
+                          {isImage && (
+                            <a href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="block mb-2">
+                              <img
+                                src={att.fileUrl}
+                                alt={att.fileName}
+                                className="max-h-64 rounded-xl border border-[#E2E8F0] object-contain bg-[#F8FAFC]"
+                              />
+                            </a>
+                          )}
+                          <a
+                            href={att.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={att.fileName}
+                            className="flex items-center gap-2.5 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-sm text-[#1E293B] hover:bg-[#F1F5F9] transition-colors group"
+                          >
+                            {isImage ? (
+                              <ImageIcon className="h-4 w-4 text-blue-500 shrink-0" />
+                            ) : (
+                              <FileText className="h-4 w-4 text-orange-500 shrink-0" />
+                            )}
+                            <span className="flex-1 truncate text-xs font-medium">{att.fileName}</span>
+                            <span className="text-[10px] text-[#94A3B8] shrink-0">
+                              {(att.fileSize / 1024).toFixed(0)} KB
+                            </span>
+                            <Download className="h-3.5 w-3.5 text-[#94A3B8] group-hover:text-[#2563EB] shrink-0" />
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
