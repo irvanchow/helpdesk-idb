@@ -232,7 +232,9 @@ export default function CategoriesPage() {
                     }}
                   >
                     <SelectTrigger className="h-10 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-sm focus:bg-white focus:border-[#2563EB]">
-                      <SelectValue placeholder="Tidak ada (kategori utama)" />
+                      <SelectValue placeholder="Tidak ada (kategori utama)">
+                        {selectedParent ? selectedParent.name : "Tidak ada (kategori utama)"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Tidak ada (kategori utama)</SelectItem>
