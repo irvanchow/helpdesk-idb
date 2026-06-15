@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String?   // hashed with bcrypt (nullable untuk user OAuth)
+  role          Role      @default(USER)
+  department    String?
+  phone         String?
+  isActive      Boolean   @default(true)
+  provider      String    @default("credentials") // credentials | microsoft
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  createdTickets Ticket[] @relation("CreatedTickets")
+  assignedTickets Ticket[] @relation("AssignedTickets")
+  comments       TicketComment[]
+  attachments    TicketAttachment[]
+  ownedTickets   Ticket[] @relation("TicketOwner")
+  accounts       Account[]
+  kbArticles     KBArticle[]
+  notifications  Notification[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Ticket {
+  id                  String        @id @default(cuid())
+  ticketNumber        String        @unique // format: TKT-2026-00001
+  title               String
+  description         String
+  status              TicketStatus  @default(OPEN)
+  priority            Priority      @default(MEDIUM)
+  categoryId          String
+  createdById         String
+  onBehalfOfId        String?       // ID user yang sebenarnya punya masalah (jika dibuatkan oleh technician/admin)
+  assignedToId        String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+  rating              Int?
+  feedback            String?
+  firstResponseAt     DateTime?     // waktu technician pertama kali merespon (komentar/status update)
+  slaBreached         Boolean       @default(false)  // true jika melewati SLA resolve time
+  responseSlaBreached Boolean       @default(false)  // true jika melewati SLA response time
+
+  category      Category      @relation(fields: [categoryId], references: [id])
+  createdBy     User          @relation("CreatedTickets", fields: [createdById], references: [id])
+  onBehalfOf    User?         @relation("TicketOwner", fields: [onBehalfOfId], references: [id])
+  assignedTo    User?         @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  comments      TicketComment[]
+  attachments   TicketAttachment[]
+  notifications Notification[]
+}
+
+model TicketComment {
+  id          String   @id @default(cuid())
+  ticketId    String
+  userId      String
+  message     String
+  isInternal  Boolean  @default(false) // hanya visible untuk technician & admin
+  createdAt   DateTime @default(now())
+
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model TicketAttachment {
+  id          String   @id @default(cuid())
+  ticketId    String
+  fileName    String
+  fileUrl     String
+  fileSize    Int
+  mimeType    String
+  uploadedById String
+  createdAt   DateTime @default(now())
+
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy  User     @relation(fields: [uploadedById], references: [id])
+}
+
+model Category {
+  id                String     @id @default(cuid())
+  name              String
+  description       String?
+  department        String?    // divisi yang menangani kategori ini, e.g. "Keuangan", "HRD/Kepegawaian"
+  responseTimeHours Int        @default(24)  // SLA: waktu response dalam jam
+  resolveTimeHours  Int        @default(72)  // SLA: waktu resolve dalam jam
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+
+  parentId          String?
+  parent            Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
+  children          Category[] @relation("CategoryChildren")
+
+  tickets           Ticket[]
+
+  @@unique([name, parentId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  ticketId  String
+  type      String   // "NEW_TICKET" | "STATUS_CHANGED" | "COMMENT_ADDED"
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model KBCategory {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  icon        String?    // lucide icon name
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  articles    KBArticle[]
+}
+
+model KBTag {
+  id       String        @id @default(cuid())
+  name     String        @unique
+  slug     String        @unique
+
+  articles KBArticleTag[]
+}
+
+model KBArticle {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  content     String
+  excerpt     String?
+  isPublished Boolean    @default(false)
+  viewCount   Int        @default(0)
+  categoryId  String
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  category    KBCategory @relation(fields: [categoryId], references: [id])
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  tags        KBArticleTag[]
+}
+
+model KBArticleTag {
+  articleId String
+  tagId     String
+
+  article   KBArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       KBTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+}
+
+enum Role {
+  ADMIN
+  USER
+  IT_SUPPORT
+  DEPARTMENT_HEAD
+  EXECUTIVE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  ESCALATED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}

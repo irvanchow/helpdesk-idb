@@ -1,0 +1,551 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Plus,
+  Pencil,
+  Settings,
+  Clock,
+  Zap,
+  FolderOpen,
+  FileText,
+  Building,
+} from "lucide-react";
+import { toast } from "sonner";
+
+const DEPARTMENTS = [
+  "BAA/Akademik",
+  "Keuangan",
+  "Marketing",
+  "Kerjasama",
+  "HRD/Kepegawaian",
+  "Operasional dan Security",
+  "Digital Communication",
+  "Penjamin Mutu",
+  "Sistem Informasi & IT Support",
+  "Prodi DKV",
+  "Prodi Desain Interior",
+  "Prodi Desain Mode",
+  "Prodi Arsitektur",
+  "Prodi Bisnis Digital",
+  "Prodi STI",
+  "Prodi Manajemen Retail",
+];
+
+interface SubCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  department: string | null;
+  responseTimeHours: number;
+  resolveTimeHours: number;
+  isActive: boolean;
+  parentId: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  department: string | null;
+  responseTimeHours: number;
+  resolveTimeHours: number;
+  isActive: boolean;
+  parentId: string | null;
+  children: SubCategory[];
+}
+
+export default function CategoriesPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | SubCategory | null>(null);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [department, setDepartment] = useState("");
+  const [responseTimeHours, setResponseTimeHours] = useState(24);
+  const [resolveTimeHours, setResolveTimeHours] = useState(72);
+  const [parentId, setParentId] = useState("");
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/admin/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const body: Record<string, unknown> = {
+        name,
+        description,
+        department: department || null,
+        responseTimeHours,
+        resolveTimeHours,
+        parentId: parentId || null,
+      };
+
+      const url = editingCategory
+        ? `/api/admin/categories/${editingCategory.id}`
+        : "/api/admin/categories";
+      const method = editingCategory ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        toast.success(editingCategory ? "Kategori diperbarui" : "Kategori ditambahkan");
+        setDialogOpen(false);
+        resetForm();
+        fetchCategories();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Gagal menyimpan kategori");
+      }
+    } catch (error) {
+      console.error("Failed to save category:", error);
+      toast.error("Terjadi kesalahan");
+    }
+  };
+
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setDepartment("");
+    setResponseTimeHours(24);
+    setResolveTimeHours(72);
+    setParentId("");
+    setEditingCategory(null);
+  };
+
+  const openEdit = (category: Category | SubCategory) => {
+    setEditingCategory(category);
+    setName(category.name);
+    setDescription(category.description || "");
+    setDepartment(category.department || "");
+    setResponseTimeHours(category.responseTimeHours);
+    setResolveTimeHours(category.resolveTimeHours);
+    setParentId(category.parentId || "");
+    setDialogOpen(true);
+  };
+
+  const openAddSubcategory = (parentCategory: Category) => {
+    resetForm();
+    setParentId(parentCategory.id);
+    setDepartment(parentCategory.department || "");
+    setDialogOpen(true);
+  };
+
+  const editingIsParent =
+    editingCategory
+      ? "children" in editingCategory && (editingCategory as Category).children?.length > 0
+      : false;
+
+  const selectedParent = categories.find((c) => c.id === parentId);
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-[#2563EB]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#1E293B]">
+            Kategori
+          </h1>
+          <p className="text-sm text-[#64748B] mt-1">
+            Kelola kategori tiket dan konfigurasi SLA
+          </p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+          <DialogTrigger render={<Button className="h-10 bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-md shadow-blue-200 transition-all duration-200 rounded-xl text-sm font-semibold" />}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Kategori
+          </DialogTrigger>
+          <DialogContent className="border border-[#E2E8F0] shadow-xl rounded-xl">
+            <div className="h-1 bg-[#2563EB] rounded-t-lg -mt-6 mx-6" />
+            <DialogHeader className="pt-2">
+              <DialogTitle className="text-lg font-bold text-[#1E293B]">
+                {editingCategory
+                  ? `Edit ${editingCategory.parentId ? "Subkategori" : "Kategori"}`
+                  : parentId
+                  ? "Tambah Subkategori"
+                  : "Tambah Kategori Baru"}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!editingIsParent && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium text-[#1E293B]">
+                    <FolderOpen className="h-4 w-4 text-[#2563EB]" />
+                    Kategori Induk
+                    <span className="text-xs font-normal text-[#94A3B8]">(kosongkan untuk kategori utama)</span>
+                  </Label>
+                  <Select
+                    value={parentId}
+                    onValueChange={(value) => {
+                      setParentId(value || "");
+                      if (value) {
+                        const parent = categories.find((c) => c.id === value);
+                        if (parent?.department) setDepartment(parent.department);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-10 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-sm focus:bg-white focus:border-[#2563EB]">
+                      <SelectValue placeholder="Tidak ada (kategori utama)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Tidak ada (kategori utama)</SelectItem>
+                      {categories
+                        .filter((c) => c.id !== editingCategory?.id)
+                        .map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedParent && (
+                    <p className="text-xs text-[#94A3B8]">
+                      Subkategori dari:{" "}
+                      <span className="font-medium text-[#64748B]">{selectedParent.name}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium text-[#1E293B]">
+                  <Settings className="h-4 w-4 text-[#2563EB]" />
+                  Nama {parentId ? "Subkategori" : "Kategori"}
+                </Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-10 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-sm focus:bg-white focus:border-[#2563EB]"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium text-[#1E293B]">
+                  <FileText className="h-4 w-4 text-[#2563EB]" />
+                  Detail / Deskripsi
+                </Label>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Contoh: Registrasi semester, pengambilan/perubahan mata kuliah"
+                  className="h-10 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-sm focus:bg-white focus:border-[#2563EB]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium text-[#1E293B]">
+                  <Building className="h-4 w-4 text-[#2563EB]" />
+                  Divisi Penanganan
+                  {parentId && <span className="text-xs font-normal text-[#94A3B8]">(dari kategori induk)</span>}
+                </Label>
+                <Select
+                  value={department}
+                  onValueChange={(value) => setDepartment(value || "")}
+                >
+                  <SelectTrigger className="h-10 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-sm focus:bg-white focus:border-[#2563EB]">
+                    <SelectValue placeholder="Pilih divisi (opsional)" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="">Tidak ada (IT/Umum)</SelectItem>
+                    {DEPARTMENTS.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium text-[#1E293B]">
+                    <Clock className="h-4 w-4 text-[#F97316]" />
+                    Response (jam)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={responseTimeHours}
+                    onChange={(e) => setResponseTimeHours(parseInt(e.target.value))}
+                    className="h-10 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-sm focus:bg-white focus:border-[#2563EB]"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium text-[#1E293B]">
+                    <Zap className="h-4 w-4 text-[#F97316]" />
+                    Resolve (jam)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={resolveTimeHours}
+                    onChange={(e) => setResolveTimeHours(parseInt(e.target.value))}
+                    className="h-10 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-sm focus:bg-white focus:border-[#2563EB]"
+                    required
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full h-10 bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-md rounded-xl text-sm font-semibold"
+              >
+                {editingCategory ? "Update" : "Tambah"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Categories Table */}
+      <Card className="border border-[#E2E8F0] bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden">
+        <div className="h-1 bg-[#2563EB]" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC]">
+                <th className="text-center py-3 px-4 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider w-12">
+                  No.
+                </th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider w-44">
+                  Kategori
+                </th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider w-48">
+                  Sub Kategori
+                </th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+                  Detail
+                </th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider w-36">
+                  SLA
+                </th>
+                <th className="text-right py-3 px-4 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider w-20">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.flatMap((category, catIndex) => {
+                const rowCount = Math.max(category.children.length, 1);
+
+                if (category.children.length === 0) {
+                  return [
+                    <tr
+                      key={category.id}
+                      className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC] transition-colors"
+                    >
+                      <td className="py-3 px-4 text-center text-sm font-semibold text-[#94A3B8] align-middle">
+                        {catIndex + 1}
+                      </td>
+                      <td className="py-3 px-4 align-middle">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                            <Settings className="h-3.5 w-3.5 text-[#2563EB]" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-[#1E293B] text-sm leading-tight">
+                              {category.name}
+                            </p>
+                            {category.department && (
+                              <p className="text-[10px] text-[#94A3B8] mt-0.5">{category.department}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-[#94A3B8] align-middle">—</td>
+                      <td className="py-3 px-4 text-sm text-[#64748B] align-middle">
+                        {category.description || "—"}
+                      </td>
+                      <td className="py-3 px-4 align-middle">
+                        <SLABadges
+                          responseTimeHours={category.responseTimeHours}
+                          resolveTimeHours={category.resolveTimeHours}
+                        />
+                      </td>
+                      <td className="py-3 px-4 text-right align-middle">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openAddSubcategory(category)}
+                            className="h-8 w-8 p-0 text-[#94A3B8] hover:text-[#2563EB] hover:bg-blue-50 rounded-lg"
+                            title="Tambah subkategori"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(category)}
+                            className="h-8 w-8 p-0 text-[#64748B] hover:text-[#2563EB] hover:bg-blue-50 rounded-lg"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>,
+                  ];
+                }
+
+                return category.children.map((sub, subIndex) => (
+                  <tr
+                    key={sub.id}
+                    className={`border-b border-[#F1F5F9] transition-colors ${
+                      subIndex % 2 === 0 ? "hover:bg-[#F8FAFC]" : "bg-[#FAFBFC] hover:bg-[#F1F5F9]"
+                    }`}
+                  >
+                    {subIndex === 0 && (
+                      <td
+                        rowSpan={rowCount}
+                        className="py-3 px-4 text-center text-sm font-semibold text-[#94A3B8] align-middle border-r border-[#F1F5F9]"
+                      >
+                        {catIndex + 1}
+                      </td>
+                    )}
+                    {subIndex === 0 && (
+                      <td
+                        rowSpan={rowCount}
+                        className="py-3 px-4 align-top border-r border-[#F1F5F9]"
+                      >
+                        <div className="flex items-start gap-2 pt-0.5">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 mt-0.5">
+                            <Settings className="h-3.5 w-3.5 text-[#2563EB]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[#1E293B] text-sm leading-tight">
+                              {category.name}
+                            </p>
+                            {category.department && (
+                              <p className="text-[10px] text-[#94A3B8] mt-0.5">{category.department}</p>
+                            )}
+                            <div className="flex gap-1 mt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openAddSubcategory(category)}
+                                className="h-6 px-2 text-[10px] text-[#94A3B8] hover:text-[#2563EB] hover:bg-blue-50 rounded-md font-normal"
+                                title="Tambah subkategori"
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Tambah
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEdit(category)}
+                                className="h-6 px-2 text-[10px] text-[#94A3B8] hover:text-[#2563EB] hover:bg-blue-50 rounded-md font-normal"
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                    <td className="py-3 px-4 align-middle">
+                      <p className="text-sm font-medium text-[#334155]">{sub.name}</p>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <p className="text-sm text-[#64748B] leading-relaxed">
+                        {sub.description || <span className="text-[#CBD5E1]">—</span>}
+                      </p>
+                    </td>
+                    <td className="py-3 px-4 align-middle">
+                      <SLABadges
+                        responseTimeHours={sub.responseTimeHours}
+                        resolveTimeHours={sub.resolveTimeHours}
+                      />
+                    </td>
+                    <td className="py-3 px-4 text-right align-middle">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit(sub as unknown as Category)}
+                        className="h-8 w-8 p-0 text-[#64748B] hover:text-[#2563EB] hover:bg-blue-50 rounded-lg"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ));
+              })}
+            </tbody>
+          </table>
+        </div>
+        {categories.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Settings className="h-12 w-12 text-[#E2E8F0] mb-3" />
+            <p className="text-[#64748B] font-medium text-sm">Tidak ada kategori ditemukan</p>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function SLABadges({
+  responseTimeHours,
+  resolveTimeHours,
+}: {
+  responseTimeHours: number;
+  resolveTimeHours: number;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-700 w-fit">
+        <Clock className="h-2.5 w-2.5" />
+        Resp. {responseTimeHours}j
+      </span>
+      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700 w-fit">
+        <Zap className="h-2.5 w-2.5" />
+        Resolve {resolveTimeHours}j
+      </span>
+    </div>
+  );
+}
