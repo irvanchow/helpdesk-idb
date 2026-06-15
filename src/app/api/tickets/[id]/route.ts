@@ -179,6 +179,22 @@ export async function PATCH(
       },
     });
 
+    // Notifikasi ke assignee baru jika assignedToId berubah
+    if (
+      validated.assignedToId !== undefined &&
+      validated.assignedToId !== ticket.assignedToId &&
+      validated.assignedToId
+    ) {
+      await prisma.notification.create({
+        data: {
+          userId: validated.assignedToId,
+          ticketId: id,
+          type: "TICKET_ASSIGNED",
+          message: `Tiket ${ticket.ticketNumber} — "${ticket.title}" telah di-assign ke Anda.`,
+        },
+      });
+    }
+
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {

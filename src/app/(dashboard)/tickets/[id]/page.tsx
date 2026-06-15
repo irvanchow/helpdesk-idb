@@ -542,7 +542,7 @@ export default function TicketDetailPage() {
                   </Select>
                 </div>
 
-                {(isAdmin || isTechnician) && (
+                {(isAdmin || isTechnician || isDeptHead) && (
                   <div className="space-y-2">
                     <Label className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                       Assign ke
@@ -550,6 +550,8 @@ export default function TicketDetailPage() {
                     <AssigneeSelect
                       currentId={ticket.assignedTo?.id}
                       onAssign={handleAssign}
+                      isDeptHead={isDeptHead}
+                      categoryDept={(ticket.category as any)?.department ?? null}
                     />
                   </div>
                 )}
@@ -589,13 +591,19 @@ function InfoRow({
 function AssigneeSelect({
   currentId,
   onAssign,
+  isDeptHead = false,
+  categoryDept = null,
 }: {
   currentId?: string;
   onAssign: (id: string) => void;
+  isDeptHead?: boolean;
+  categoryDept?: string | null;
 }) {
   const [assignees, setAssignees] = useState<
     { id: string; name: string; role: string; department: string | null }[]
   >([]);
+
+  const isItCategory = categoryDept === "Sistem Informasi & IT Support";
 
   useEffect(() => {
     Promise.all([
@@ -606,8 +614,13 @@ function AssigneeSelect({
     });
   }, []);
 
-  const technicians = assignees.filter((a) => a.role === "IT_SUPPORT");
-  const deptHeads = assignees.filter((a) => a.role === "DEPARTMENT_HEAD");
+  // DEPARTMENT_HEAD: hanya lihat divisinya sendiri, kecuali kategori IT Support boleh lihat semua
+  const filteredAssignees = isDeptHead && !isItCategory
+    ? assignees.filter((a) => a.department === categoryDept)
+    : assignees;
+
+  const technicians = filteredAssignees.filter((a) => a.role === "IT_SUPPORT");
+  const deptHeads = filteredAssignees.filter((a) => a.role === "DEPARTMENT_HEAD");
   const selectedName = assignees.find((a) => a.id === currentId)?.name;
 
   return (

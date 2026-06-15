@@ -167,6 +167,27 @@ export async function POST(req: NextRequest) {
     const creatorName = ticket.createdBy.name;
     const notifMessage = `Tiket baru dari ${creatorName}: ${ticket.ticketNumber} — ${ticket.title}`;
 
+    // Auto-assign: ke DEPARTMENT_HEAD yang departemennya sesuai kategori
+    // Khusus kategori IT Support: tidak auto-assign (ditangani manual oleh tim IT)
+    let autoAssignedId: string | null = null;
+    if (categoryDept && categoryDept !== "Sistem Informasi & IT Support") {
+      const deptHead = await prisma.user.findFirst({
+        where: {
+          role: "DEPARTMENT_HEAD",
+          department: categoryDept,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (deptHead) {
+        autoAssignedId = deptHead.id;
+        await prisma.ticket.update({
+          where: { id: ticket.id },
+          data: { assignedToId: deptHead.id },
+        });
+      }
+    }
+
     const recipients = await prisma.user.findMany({
       where: {
         isActive: true,
@@ -185,14 +206,26 @@ export async function POST(req: NextRequest) {
       select: { id: true },
     });
 
-    if (recipients.length > 0) {
+    const notifRecipients = recipients.map((r) => ({
+      userId: r.id,
+      ticketId: ticket.id,
+      type: "NEW_TICKET",
+      message: notifMessage,
+    }));
+
+    // Notifikasi TICKET_ASSIGNED ke department head yang di-auto-assign
+    if (autoAssignedId && autoAssignedId !== userId) {
+      notifRecipients.push({
+        userId: autoAssignedId,
+        ticketId: ticket.id,
+        type: "TICKET_ASSIGNED",
+        message: `Tiket ${ticket.ticketNumber} — "${ticket.title}" telah di-assign ke Anda secara otomatis.`,
+      });
+    }
+
+    if (notifRecipients.length > 0) {
       await prisma.notification.createMany({
-        data: recipients.map((r) => ({
-          userId: r.id,
-          ticketId: ticket.id,
-          type: "NEW_TICKET",
-          message: notifMessage,
-        })),
+        data: notifRecipients,
       });
     }
 
