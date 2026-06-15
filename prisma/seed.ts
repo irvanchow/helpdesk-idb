@@ -175,8 +175,8 @@ async function main() {
       ],
     },
     {
-      name: "Operasional & Security",
-      department: "Operasional & Security",
+      name: "Operasional dan Security",
+      department: "Operasional dan Security",
       responseTimeHours: 4,
       resolveTimeHours: 24,
       children: [
