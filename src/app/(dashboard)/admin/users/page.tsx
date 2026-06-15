@@ -46,6 +46,13 @@ interface User {
   createdAt: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  department: string | null;
+  parentId: string | null;
+}
+
 const roleConfig: Record<string, { bg: string; text: string; icon: any; label: string }> = {
   ADMIN: { bg: "bg-blue-50", text: "text-blue-700", icon: Shield, label: "Admin" },
   IT_SUPPORT: { bg: "bg-orange-50", text: "text-orange-700", icon: Wrench, label: "IT Support" },
@@ -65,6 +72,7 @@ interface DeleteBlockDetails {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -84,6 +92,9 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    fetch("/api/admin/categories").then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setCategories(data);
+    });
   }, []);
 
   const fetchUsers = async () => {
@@ -356,6 +367,9 @@ export default function UsersPage() {
                 <th className="text-left py-3 px-3 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider">
                   Divisi
                 </th>
+                <th className="text-left py-3 px-3 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+                  Kategori
+                </th>
                 <th className="text-center py-3 px-3 text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider">
                   Status
                 </th>
@@ -404,6 +418,24 @@ export default function UsersPage() {
                           <Building className="h-3 w-3" />
                           {user.department}
                         </span>
+                      ) : (
+                        <span className="text-xs text-[#94A3B8]">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3">
+                      {user.department ? (
+                        <div className="flex flex-wrap gap-1">
+                          {categories
+                            .filter(c => c.parentId === null && c.department === user.department)
+                            .map(c => (
+                              <span key={c.id} className="inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                                {c.name}
+                              </span>
+                            ))}
+                          {categories.filter(c => c.parentId === null && c.department === user.department).length === 0 && (
+                            <span className="text-xs text-[#94A3B8]">-</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-xs text-[#94A3B8]">-</span>
                       )}
