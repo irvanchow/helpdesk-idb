@@ -55,9 +55,9 @@ interface Category {
 
 const roleConfig: Record<string, { bg: string; text: string; icon: any; label: string }> = {
   ADMIN: { bg: "bg-blue-50", text: "text-blue-700", icon: Shield, label: "Admin" },
-  IT_SUPPORT: { bg: "bg-orange-50", text: "text-orange-700", icon: Wrench, label: "IT Support" },
+  AGENT: { bg: "bg-orange-50", text: "text-orange-700", icon: Wrench, label: "Agent" },
   USER: { bg: "bg-slate-100", text: "text-slate-600", icon: Users, label: "User" },
-  DEPARTMENT_HEAD: { bg: "bg-purple-50", text: "text-purple-700", icon: Building, label: "Kepala Divisi" },
+  SUPERVISOR: { bg: "bg-purple-50", text: "text-purple-700", icon: Building, label: "Supervisor" },
   EXECUTIVE: { bg: "bg-indigo-50", text: "text-indigo-700", icon: Building2, label: "Eksekutif" },
 };
 
@@ -297,8 +297,8 @@ export default function UsersPage() {
                   <SelectContent>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="EXECUTIVE">Eksekutif</SelectItem>
-                    <SelectItem value="DEPARTMENT_HEAD">Kepala Divisi</SelectItem>
-                    <SelectItem value="IT_SUPPORT">IT Support</SelectItem>
+                    <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+                    <SelectItem value="AGENT">Agent</SelectItem>
                     <SelectItem value="USER">User</SelectItem>
                   </SelectContent>
                 </Select>

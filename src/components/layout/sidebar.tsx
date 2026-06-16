@@ -41,15 +41,15 @@ const navigation = {
     { name: "Buat Tiket", href: "/tickets/new", icon: PlusCircle },
     { name: "Knowledge Base", href: "/kb", icon: BookOpen },
   ],
-  IT_SUPPORT: [
+  AGENT: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Asisten", href: "/chat", icon: MessageCircle },
+    { name: "Tiket Divisi", href: "/technician/tickets", icon: Shield },
     { name: "Tiket Saya", href: "/tickets", icon: Ticket },
-    { name: "Tiket Terbuka", href: "/technician/tickets", icon: Shield },
     { name: "Buat Tiket", href: "/tickets/new", icon: PlusCircle },
     { name: "Knowledge Base", href: "/kb", icon: BookOpen },
   ],
-  DEPARTMENT_HEAD: [
+  SUPERVISOR: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Asisten", href: "/chat", icon: MessageCircle },
     { name: "Tiket Divisi", href: "/department/tickets", icon: Building2 },
@@ -142,7 +142,19 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 <Crown className="h-3 w-3" />
                 Eksekutif
               </span>
-            ) : role}
+            ) : role === "SUPERVISOR" ? (
+              <span className="flex items-center gap-1 text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                <Building2 className="h-3 w-3" />
+                Supervisor
+              </span>
+            ) : role === "AGENT" ? (
+              <span className="flex items-center gap-1 text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                <Shield className="h-3 w-3" />
+                Agent
+              </span>
+            ) : (
+              <span>{role}</span>
+            )}
           </span>
         </div>
         <Button

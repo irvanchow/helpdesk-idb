@@ -15,9 +15,23 @@ export async function GET() {
     let baseWhere: any = {};
     if (role === "ADMIN") {
       // Admin sees all
-    } else if (role === "IT_SUPPORT") {
-      baseWhere = { assignedToId: userId };
-    } else if (role === "DEPARTMENT_HEAD") {
+    } else if (role === "AGENT") {
+      const deptUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { department: true },
+      });
+      if (deptUser?.department) {
+        baseWhere = {
+          OR: [
+            { assignedToId: userId },
+            { createdById: userId },
+            { category: { department: deptUser.department } },
+          ],
+        };
+      } else {
+        baseWhere = { OR: [{ assignedToId: userId }, { createdById: userId }] };
+      }
+    } else if (role === "SUPERVISOR") {
       const deptUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { department: true },

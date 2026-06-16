@@ -38,16 +38,27 @@ export async function GET(req: NextRequest) {
 
     if (role === "ADMIN" || role === "EXECUTIVE") {
       // Admin and Executive see all tickets
-    } else if (role === "IT_SUPPORT") {
-      where = {
-        OR: [
-          { assignedToId: userId },
-          { createdById: userId },
-          { status: "OPEN" },
-        ],
-      };
-    } else if (role === "DEPARTMENT_HEAD") {
-      // Department head sees tickets in their department's categories
+    } else if (role === "AGENT") {
+      // Agent sees: tickets in their department's categories + assigned to them + created by them
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { department: true },
+      });
+      if (user?.department) {
+        where = {
+          OR: [
+            { assignedToId: userId },
+            { createdById: userId },
+            { category: { department: user.department } },
+          ],
+        };
+      } else {
+        where = {
+          OR: [{ assignedToId: userId }, { createdById: userId }],
+        };
+      }
+    } else if (role === "SUPERVISOR") {
+      // Supervisor sees all tickets in their department's categories
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { department: true },
@@ -125,10 +136,10 @@ export async function POST(req: NextRequest) {
     });
     const ticketNumber = `TKT-${year}-${String(count + 1).padStart(5, "0")}`;
 
-    // Only admin/technician/department_head can create on behalf of another user
+    // Only admin/agent/supervisor can create on behalf of another user
     const onBehalfOfId =
       validated.onBehalfOfId &&
-      (role === "ADMIN" || role === "IT_SUPPORT" || role === "DEPARTMENT_HEAD")
+      (role === "ADMIN" || role === "AGENT" || role === "SUPERVISOR")
         ? validated.onBehalfOfId
         : null;
 
@@ -167,23 +178,23 @@ export async function POST(req: NextRequest) {
     const creatorName = ticket.createdBy.name;
     const notifMessage = `Tiket baru dari ${creatorName}: ${ticket.ticketNumber} — ${ticket.title}`;
 
-    // Auto-assign: ke DEPARTMENT_HEAD yang departemennya sesuai kategori
+    // Auto-assign: ke SUPERVISOR yang departemennya sesuai kategori
     // Khusus kategori IT Support: tidak auto-assign (ditangani manual oleh tim IT)
     let autoAssignedId: string | null = null;
     if (categoryDept && categoryDept !== "Sistem Informasi & IT Support") {
-      const deptHead = await prisma.user.findFirst({
+      const supervisor = await prisma.user.findFirst({
         where: {
-          role: "DEPARTMENT_HEAD",
+          role: "SUPERVISOR",
           department: categoryDept,
           isActive: true,
         },
         select: { id: true },
       });
-      if (deptHead) {
-        autoAssignedId = deptHead.id;
+      if (supervisor) {
+        autoAssignedId = supervisor.id;
         await prisma.ticket.update({
           where: { id: ticket.id },
-          data: { assignedToId: deptHead.id },
+          data: { assignedToId: supervisor.id },
         });
       }
     }
@@ -196,10 +207,10 @@ export async function POST(req: NextRequest) {
           { role: "ADMIN" },
           { role: "EXECUTIVE" },
           ...(categoryDept === "Sistem Informasi & IT Support"
-            ? [{ role: "IT_SUPPORT" as const }]
+            ? [{ role: "AGENT" as const }]
             : []),
           ...(categoryDept
-            ? [{ role: "DEPARTMENT_HEAD" as const, department: categoryDept }]
+            ? [{ role: "SUPERVISOR" as const, department: categoryDept }]
             : []),
         ],
       },

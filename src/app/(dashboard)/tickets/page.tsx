@@ -92,7 +92,7 @@ export default function TicketsPage() {
   const pageTitle =
     role === "ADMIN"
       ? "Semua Tiket"
-      : role === "IT_SUPPORT"
+      : role === "AGENT" || role === "SUPERVISOR"
       ? "Tiket"
       : "Tiket Saya";
 

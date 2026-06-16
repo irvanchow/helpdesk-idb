@@ -1,0 +1,3 @@
+-- Rename roles: IT_SUPPORT -> AGENT, DEPARTMENT_HEAD -> SUPERVISOR
+UPDATE "User" SET "role" = 'AGENT' WHERE "role" = 'IT_SUPPORT';
+UPDATE "User" SET "role" = 'SUPERVISOR' WHERE "role" = 'DEPARTMENT_HEAD';

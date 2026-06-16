@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     }
 
     const role = session.user.role;
-    if (role !== "ADMIN" && role !== "IT_SUPPORT") {
+    if (role !== "ADMIN" && role !== "AGENT") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

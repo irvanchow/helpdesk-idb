@@ -15,19 +15,19 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Protect technician routes
+  // Protect agent routes (technician)
   if (
     pathname.startsWith("/technician") &&
-    token.user?.role !== "IT_SUPPORT" &&
+    token.user?.role !== "AGENT" &&
     token.user?.role !== "ADMIN"
   ) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Protect department head routes
+  // Protect supervisor/department routes
   if (
     pathname.startsWith("/department") &&
-    token.user?.role !== "DEPARTMENT_HEAD" &&
+    token.user?.role !== "SUPERVISOR" &&
     token.user?.role !== "ADMIN"
   ) {
     return NextResponse.redirect(new URL("/dashboard", req.url));

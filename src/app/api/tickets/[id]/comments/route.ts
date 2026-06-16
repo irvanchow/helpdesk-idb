@@ -36,8 +36,8 @@ export async function POST(
     // Check permissions
     const hasAccess =
       role === "ADMIN" ||
-      role === "IT_SUPPORT" ||
-      role === "DEPARTMENT_HEAD" ||
+      role === "AGENT" ||
+      role === "SUPERVISOR" ||
       ticket.assignedToId === userId ||
       ticket.createdById === userId ||
       ticket.onBehalfOfId === userId;
@@ -49,13 +49,13 @@ export async function POST(
     // Only admin/technician/department_head can create internal comments
     const isInternal =
       validated.isInternal &&
-      (role === "ADMIN" || role === "IT_SUPPORT" || role === "DEPARTMENT_HEAD")
+      (role === "ADMIN" || role === "AGENT" || role === "SUPERVISOR")
         ? true
         : false;
 
-    // Track first response if technician/admin/dept_head comments
+    // Track first response if agent/admin/supervisor comments
     if (
-      (role === "ADMIN" || role === "IT_SUPPORT" || role === "DEPARTMENT_HEAD") &&
+      (role === "ADMIN" || role === "AGENT" || role === "SUPERVISOR") &&
       !ticket.firstResponseAt &&
       !isInternal
     ) {

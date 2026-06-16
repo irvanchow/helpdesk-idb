@@ -86,7 +86,7 @@ export default function NewTicketPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const role = session?.user?.role;
-  const canCreateOnBehalf = role === "ADMIN" || role === "IT_SUPPORT" || role === "DEPARTMENT_HEAD";
+  const canCreateOnBehalf = role === "ADMIN" || role === "AGENT" || role === "SUPERVISOR";
 
   useEffect(() => {
     fetchCategories();

@@ -27,8 +27,8 @@ async function main() {
       name: "Budi Santoso",
       email: "tech1@idbbali.ac.id",
       password: techPassword,
-      role: "IT_SUPPORT",
-      department: "IT Support",
+      role: "AGENT",
+      department: "Sistem Informasi & IT Support",
     },
   });
 
@@ -39,8 +39,8 @@ async function main() {
       name: "Ani Wijaya",
       email: "tech2@idbbali.ac.id",
       password: techPassword,
-      role: "IT_SUPPORT",
-      department: "Network",
+      role: "AGENT",
+      department: "Sistem Informasi & IT Support",
     },
   });
 
@@ -53,7 +53,7 @@ async function main() {
       name: "Ni Made Keuangan",
       email: "kabag.keuangan@idbbali.ac.id",
       password: deptHeadPassword,
-      role: "DEPARTMENT_HEAD",
+      role: "SUPERVISOR",
       department: "Keuangan",
     },
   });
@@ -65,7 +65,7 @@ async function main() {
       name: "I Wayan Kepegawaian",
       email: "kabag.hrd@idbbali.ac.id",
       password: deptHeadPassword,
-      role: "DEPARTMENT_HEAD",
+      role: "SUPERVISOR",
       department: "HRD/Kepegawaian",
     },
   });
@@ -77,7 +77,7 @@ async function main() {
       name: "Ni Nyoman Akademik",
       email: "kabag.baa@idbbali.ac.id",
       password: deptHeadPassword,
-      role: "DEPARTMENT_HEAD",
+      role: "SUPERVISOR",
       department: "BAA/Akademik",
     },
   });

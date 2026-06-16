@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const role = session.user.role;
 
     // Admin, technician, and department head can list users (for creating tickets on behalf)
-    if (role !== "ADMIN" && role !== "IT_SUPPORT" && role !== "DEPARTMENT_HEAD") {
+    if (role !== "ADMIN" && role !== "AGENT" && role !== "SUPERVISOR") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

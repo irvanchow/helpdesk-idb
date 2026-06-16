@@ -187,8 +187,8 @@ model KBArticleTag {
 enum Role {
   ADMIN
   USER
-  IT_SUPPORT
-  DEPARTMENT_HEAD
+  AGENT
+  SUPERVISOR
   EXECUTIVE
 }
 

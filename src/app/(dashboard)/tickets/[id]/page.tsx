@@ -106,9 +106,9 @@ export default function TicketDetailPage() {
   const role = session?.user?.role;
   const userId = session?.user?.id;
   const isAdmin = role === "ADMIN";
-  const isTechnician = role === "IT_SUPPORT";
-  const isDeptHead = role === "DEPARTMENT_HEAD";
-  const canManage = isAdmin || isTechnician || isDeptHead;
+  const isAgent = role === "AGENT";
+  const isSupervisor = role === "SUPERVISOR";
+  const canManage = isAdmin || isAgent || isSupervisor;
 
   useEffect(() => {
     fetchTicket();
@@ -365,8 +365,10 @@ export default function TicketDetailPage() {
                         className={`flex h-8 w-8 items-center justify-center rounded-lg ${
                           comment.user.role === "ADMIN"
                             ? "bg-blue-100 text-blue-600"
-                            : comment.user.role === "IT_SUPPORT"
+                            : comment.user.role === "AGENT"
                             ? "bg-orange-100 text-orange-600"
+                            : comment.user.role === "SUPERVISOR"
+                            ? "bg-purple-100 text-purple-600"
                             : "bg-slate-100 text-slate-600"
                         }`}
                       >
@@ -599,7 +601,7 @@ export default function TicketDetailPage() {
                   </Select>
                 </div>
 
-                {(isAdmin || isTechnician || isDeptHead) && (
+                {(isAdmin || isAgent || isSupervisor) && (
                   <div className="space-y-2">
                     <Label className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                       Assign ke
@@ -607,7 +609,7 @@ export default function TicketDetailPage() {
                     <AssigneeSelect
                       currentId={ticket.assignedTo?.id}
                       onAssign={handleAssign}
-                      isDeptHead={isDeptHead}
+                      isSupervisor={isSupervisor}
                       categoryDept={(ticket.category as any)?.department ?? null}
                     />
                   </div>
@@ -648,12 +650,12 @@ function InfoRow({
 function AssigneeSelect({
   currentId,
   onAssign,
-  isDeptHead = false,
+  isSupervisor = false,
   categoryDept = null,
 }: {
   currentId?: string;
   onAssign: (id: string) => void;
-  isDeptHead?: boolean;
+  isSupervisor?: boolean;
   categoryDept?: string | null;
 }) {
   const [assignees, setAssignees] = useState<
@@ -664,20 +666,21 @@ function AssigneeSelect({
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/users?role=IT_SUPPORT").then((r) => r.json()),
-      fetch("/api/users?role=DEPARTMENT_HEAD").then((r) => r.json()),
-    ]).then(([techs, heads]) => {
-      setAssignees([...techs, ...heads]);
+      fetch("/api/users?role=AGENT").then((r) => r.json()),
+      fetch("/api/users?role=SUPERVISOR").then((r) => r.json()),
+    ]).then(([agents, supervisors]) => {
+      const all = [...(Array.isArray(agents) ? agents : []), ...(Array.isArray(supervisors) ? supervisors : [])];
+      setAssignees(all);
     });
   }, []);
 
-  // DEPARTMENT_HEAD: hanya lihat divisinya sendiri, kecuali kategori IT Support boleh lihat semua
-  const filteredAssignees = isDeptHead && !isItCategory
+  // SUPERVISOR: hanya lihat divisinya sendiri, kecuali kategori IT Support boleh lihat semua
+  const filteredAssignees = isSupervisor && !isItCategory
     ? assignees.filter((a) => a.department === categoryDept)
     : assignees;
 
-  const technicians = filteredAssignees.filter((a) => a.role === "IT_SUPPORT");
-  const deptHeads = filteredAssignees.filter((a) => a.role === "DEPARTMENT_HEAD");
+  const agents = filteredAssignees.filter((a) => a.role === "AGENT");
+  const supervisors = filteredAssignees.filter((a) => a.role === "SUPERVISOR");
   const selectedName = assignees.find((a) => a.id === currentId)?.name;
 
   return (
@@ -692,24 +695,27 @@ function AssigneeSelect({
       </SelectTrigger>
       <SelectContent className="min-w-[var(--radix-select-trigger-width)] !w-auto">
         <SelectItem value="">Unassign</SelectItem>
-        {technicians.length > 0 && (
+        {agents.length > 0 && (
           <>
             <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">
-              Technician
+              Agent
             </div>
-            {technicians.map((t) => (
+            {agents.map((t) => (
               <SelectItem key={t.id} value={t.id}>
                 {t.name}
+                {t.department && (
+                  <span className="ml-1 text-[#94A3B8]">({t.department})</span>
+                )}
               </SelectItem>
             ))}
           </>
         )}
-        {deptHeads.length > 0 && (
+        {supervisors.length > 0 && (
           <>
             <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">
-              Kepala Divisi
+              Supervisor
             </div>
-            {deptHeads.map((d) => (
+            {supervisors.map((d) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.name}
                 {d.department && (

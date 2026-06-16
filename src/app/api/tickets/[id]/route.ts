@@ -52,19 +52,19 @@ export async function GET(
     const userId = session.user.id;
     const role = session.user.role;
 
-    let isDeptHead = false;
-    if (role === "DEPARTMENT_HEAD") {
+    let isSupervisorOrAgentInDept = false;
+    if (role === "SUPERVISOR" || role === "AGENT") {
       const deptUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { department: true },
       });
-      isDeptHead = !!deptUser?.department && deptUser.department === (ticket as any).category?.department;
+      isSupervisorOrAgentInDept = !!deptUser?.department && deptUser.department === (ticket as any).category?.department;
     }
 
     const hasAccess =
       role === "ADMIN" ||
-      role === "IT_SUPPORT" ||
-      isDeptHead ||
+      role === "AGENT" ||
+      isSupervisorOrAgentInDept ||
       ticket.assignedToId === userId ||
       ticket.createdById === userId ||
       ticket.onBehalfOfId === userId;
@@ -75,7 +75,7 @@ export async function GET(
 
     // Filter internal comments for regular users
     let filteredComments = ticket.comments;
-    if (role !== "ADMIN" && role !== "IT_SUPPORT" && role !== "DEPARTMENT_HEAD") {
+    if (role !== "ADMIN" && role !== "AGENT" && role !== "SUPERVISOR") {
       filteredComments = ticket.comments.filter((c) => !c.isInternal);
     }
 
@@ -112,25 +112,49 @@ export async function PATCH(
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
-    // Check permissions
-    let deptHeadCanUpdate = false;
-    if (role === "DEPARTMENT_HEAD") {
+    // Check permissions for update
+    // SUPERVISOR: bisa assign ke siapapun di divisinya + update status
+    // AGENT: hanya bisa self-assign + update status (tidak bisa assign ke orang lain)
+    let supervisorCanUpdate = false;
+    let agentCanUpdate = false;
+    if (role === "SUPERVISOR") {
       const deptUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { department: true },
       });
-      deptHeadCanUpdate =
+      supervisorCanUpdate =
+        !!deptUser?.department &&
+        deptUser.department === (ticket as any).category?.department;
+    } else if (role === "AGENT") {
+      const deptUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { department: true },
+      });
+      agentCanUpdate =
         !!deptUser?.department &&
         deptUser.department === (ticket as any).category?.department;
     }
 
     const canUpdate =
       role === "ADMIN" ||
-      deptHeadCanUpdate ||
-      role === "IT_SUPPORT";
+      supervisorCanUpdate ||
+      agentCanUpdate;
 
     if (!canUpdate) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Agent hanya boleh self-assign (assign ke diri sendiri), tidak ke orang lain
+    if (
+      role === "AGENT" &&
+      validated.assignedToId !== undefined &&
+      validated.assignedToId !== null &&
+      validated.assignedToId !== userId
+    ) {
+      return NextResponse.json(
+        { error: "Agent hanya bisa assign tiket ke diri sendiri" },
+        { status: 403 }
+      );
     }
 
     const updateData: any = { ...validated };
@@ -139,7 +163,7 @@ export async function PATCH(
     if (
       validated.status === "IN_PROGRESS" &&
       !ticket.firstResponseAt &&
-      (role === "IT_SUPPORT" || role === "DEPARTMENT_HEAD")
+      (role === "AGENT" || role === "SUPERVISOR")
     ) {
       updateData.firstResponseAt = new Date();
       
