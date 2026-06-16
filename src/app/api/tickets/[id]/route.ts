@@ -135,10 +135,17 @@ export async function PATCH(
         deptUser.department === (ticket as any).category?.department;
     }
 
+    // Pembuat tiket boleh submit rating (menutup tiket)
+    const isRatingOnly =
+      validated.rating !== undefined &&
+      Object.keys(validated).filter((k) => validated[k as keyof typeof validated] !== undefined).length <= 2 &&
+      (ticket.createdById === userId || ticket.onBehalfOfId === userId);
+
     const canUpdate =
       role === "ADMIN" ||
       supervisorCanUpdate ||
-      agentCanUpdate;
+      agentCanUpdate ||
+      isRatingOnly;
 
     if (!canUpdate) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
