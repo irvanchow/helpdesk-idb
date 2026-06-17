@@ -37,27 +37,12 @@ interface KBCategory {
   _count: { articles: number };
 }
 
-const FAQS: { question: string; answer: string }[] = [
-  {
-    question: "Bagaimana cara membuat tiket baru?",
-    answer:
-      "Klik menu 'Buat Tiket' di sidebar, pilih kategori dan sub kategori yang sesuai dengan masalah Anda, lalu isi judul dan deskripsi lengkap. Anda juga dapat melampirkan file pendukung seperti screenshot. Setelah tiket dibuat, Anda akan menerima nomor tiket (format TKT-2026-XXXXX) untuk pelacakan.",
-  },
-  {
-    question: "Berapa lama waktu respons untuk tiket saya?",
-    answer:
-      "Waktu respons mengikuti SLA per kategori. Tiket IT Support & Operasional umumnya direspons dalam 4 jam dan diselesaikan dalam 24 jam. Tiket BAA/Akademik, Keuangan, dan HRD direspons dalam 8 jam dan diselesaikan dalam 48 jam. Anda akan mendapat notifikasi setiap kali ada update status atau komentar baru.",
-  },
-  {
-    question: "Apa yang harus dilakukan jika lupa password akun kampus?",
-    answer:
-      "Buat tiket di kategori 'Sistem Informasi & IT Support' > sub kategori 'Akun & Autentikasi'. Sertakan NIM/NIP dan email kampus yang terdaftar. Tim IT akan memproses reset password dan mengirim kredensial baru ke email pribadi yang tercatat di sistem. Untuk masalah mendesak, hubungi langsung helpdesk IT.",
-  },
-];
+interface FAQItem { id: string; question: string; answer: string; }
 
 export default function KBPage() {
   const [articles, setArticles] = useState<KBArticle[]>([]);
   const [categories, setCategories] = useState<KBCategory[]>([]);
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -66,6 +51,7 @@ export default function KBPage() {
   useEffect(() => {
     fetchCategories();
     fetchArticles();
+    fetch("/api/kb/faqs").then((r) => r.json()).then(setFaqs).catch(() => {});
   }, []);
 
   const fetchCategories = async () => {
@@ -246,7 +232,7 @@ export default function KBPage() {
       )}
 
       {/* FAQ */}
-      <div className="pt-4">
+      {faqs.length > 0 && <div className="pt-4">
         <div className="flex items-center gap-2 mb-4">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
             <HelpCircle className="h-5 w-5 text-[#2563EB]" />
@@ -262,7 +248,7 @@ export default function KBPage() {
         </div>
 
         <div className="space-y-2.5">
-          {FAQS.map((faq, idx) => {
+          {faqs.map((faq, idx) => {
             const isOpen = openFaq === idx;
             return (
               <Card
@@ -294,7 +280,7 @@ export default function KBPage() {
             );
           })}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -37,6 +37,7 @@ import {
   Globe,
   FolderPlus,
   AlertCircle,
+  HelpCircle,
 } from "lucide-react";
 
 interface KBArticle {
@@ -83,10 +84,77 @@ export default function AdminKBPage() {
   const [catDesc, setCatDesc] = useState("");
   const [catSubmitting, setCatSubmitting] = useState(false);
 
+  // FAQ state
+  interface FAQItem { id: string; question: string; answer: string; order: number; isActive: boolean; }
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [faqDialogOpen, setFaqDialogOpen] = useState(false);
+  const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
+  const [faqQuestion, setFaqQuestion] = useState("");
+  const [faqAnswer, setFaqAnswer] = useState("");
+  const [faqOrder, setFaqOrder] = useState(0);
+  const [faqSubmitting, setFaqSubmitting] = useState(false);
+
   useEffect(() => {
     fetchArticles();
     fetchCategories();
+    fetchFaqs();
   }, []);
+
+  const fetchFaqs = async () => {
+    try {
+      const res = await fetch("/api/kb/faqs");
+      if (res.ok) setFaqs(await res.json());
+    } catch {}
+  };
+
+  const resetFaqForm = () => {
+    setFaqQuestion("");
+    setFaqAnswer("");
+    setFaqOrder(0);
+    setEditingFaqId(null);
+  };
+
+  const handleEditFaq = (faq: FAQItem) => {
+    setEditingFaqId(faq.id);
+    setFaqQuestion(faq.question);
+    setFaqAnswer(faq.answer);
+    setFaqOrder(faq.order);
+    setFaqDialogOpen(true);
+  };
+
+  const handleDeleteFaq = async (id: string) => {
+    if (!confirm("Yakin ingin menghapus FAQ ini?")) return;
+    try {
+      const res = await fetch(`/api/kb/faqs/${id}`, { method: "DELETE" });
+      if (res.ok) { toast.success("FAQ berhasil dihapus"); fetchFaqs(); }
+      else toast.error("Gagal menghapus FAQ");
+    } catch { toast.error("Terjadi kesalahan"); }
+  };
+
+  const handleSubmitFaq = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!faqQuestion.trim() || !faqAnswer.trim()) {
+      toast.error("Pertanyaan dan jawaban wajib diisi");
+      return;
+    }
+    setFaqSubmitting(true);
+    try {
+      const url = editingFaqId ? `/api/kb/faqs/${editingFaqId}` : "/api/kb/faqs";
+      const method = editingFaqId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: faqQuestion, answer: faqAnswer, order: faqOrder }),
+      });
+      if (res.ok) {
+        toast.success(editingFaqId ? "FAQ diperbarui" : "FAQ dibuat");
+        setFaqDialogOpen(false);
+        resetFaqForm();
+        fetchFaqs();
+      } else toast.error("Gagal menyimpan FAQ");
+    } catch { toast.error("Terjadi kesalahan"); }
+    finally { setFaqSubmitting(false); }
+  };
 
   const fetchArticles = async () => {
     try {
@@ -630,6 +698,97 @@ export default function AdminKBPage() {
               <p className="text-xs text-[#94A3B8] mt-1">
                 Klik "Artikel Baru" untuk membuat artikel pertama
               </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* FAQ Section */}
+      <Card className="border border-[#E2E8F0] bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-5 px-5">
+          <CardTitle className="text-base font-semibold text-[#1E293B] flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+              <HelpCircle className="h-4 w-4 text-[#2563EB]" />
+            </div>
+            FAQ
+          </CardTitle>
+          <Dialog open={faqDialogOpen} onOpenChange={(open) => { setFaqDialogOpen(open); if (!open) resetFaqForm(); }}>
+            <DialogTrigger className="h-9 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-sm font-semibold inline-flex items-center px-4 transition-colors">
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah FAQ
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editingFaqId ? "Edit FAQ" : "Tambah FAQ"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmitFaq} className="space-y-4 mt-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="faq-question">Pertanyaan</Label>
+                  <Input
+                    id="faq-question"
+                    value={faqQuestion}
+                    onChange={(e) => setFaqQuestion(e.target.value)}
+                    placeholder="Tulis pertanyaan..."
+                    className="border-[#E2E8F0] rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="faq-answer">Jawaban</Label>
+                  <Textarea
+                    id="faq-answer"
+                    value={faqAnswer}
+                    onChange={(e) => setFaqAnswer(e.target.value)}
+                    placeholder="Tulis jawaban..."
+                    rows={4}
+                    className="border-[#E2E8F0] rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="faq-order">Urutan</Label>
+                  <Input
+                    id="faq-order"
+                    type="number"
+                    value={faqOrder}
+                    onChange={(e) => setFaqOrder(Number(e.target.value))}
+                    className="border-[#E2E8F0] rounded-xl w-24"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setFaqDialogOpen(false); resetFaqForm(); }}>Batal</Button>
+                  <Button type="submit" disabled={faqSubmitting} className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl">
+                    <Save className="mr-2 h-4 w-4" />
+                    {faqSubmitting ? "Menyimpan..." : "Simpan"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent className="px-5 pb-5">
+          {faqs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <HelpCircle className="h-10 w-10 text-[#E2E8F0] mb-3" />
+              <p className="text-sm text-[#64748B] font-medium">Belum ada FAQ</p>
+              <p className="text-xs text-[#94A3B8] mt-1">Klik "Tambah FAQ" untuk menambahkan pertanyaan umum</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#F1F5F9]">
+              {faqs.map((faq) => (
+                <div key={faq.id} className="py-4 flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#1E293B]">{faq.question}</p>
+                    <p className="text-sm text-[#64748B] mt-1 line-clamp-2">{faq.answer}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-[#64748B] hover:text-[#F97316]" onClick={() => handleEditFaq(faq)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-[#64748B] hover:text-red-600" onClick={() => handleDeleteFaq(faq.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
