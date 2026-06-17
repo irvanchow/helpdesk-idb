@@ -25,7 +25,7 @@ import { signOut } from "next-auth/react";
 const navigation = {
   ADMIN: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Asisten", href: "/chat", icon: MessageCircle },
+    { name: "Asisten", href: "/chat", icon: MessageCircle, beta: true },
     { name: "Semua Tiket", href: "/tickets", icon: Ticket },
     { name: "Buat Tiket", href: "/tickets/new", icon: PlusCircle },
     { name: "Knowledge Base", href: "/kb", icon: BookOpen },
@@ -36,14 +36,14 @@ const navigation = {
   ],
   USER: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Asisten", href: "/chat", icon: MessageCircle },
+    { name: "Asisten", href: "/chat", icon: MessageCircle, beta: true },
     { name: "Tiket Saya", href: "/tickets", icon: Ticket },
     { name: "Buat Tiket", href: "/tickets/new", icon: PlusCircle },
     { name: "Knowledge Base", href: "/kb", icon: BookOpen },
   ],
   AGENT: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Asisten", href: "/chat", icon: MessageCircle },
+    { name: "Asisten", href: "/chat", icon: MessageCircle, beta: true },
     { name: "Tiket Divisi", href: "/technician/tickets", icon: Shield },
     { name: "Tiket Saya", href: "/tickets", icon: Ticket },
     { name: "Buat Tiket", href: "/tickets/new", icon: PlusCircle },
@@ -51,7 +51,7 @@ const navigation = {
   ],
   SUPERVISOR: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Asisten", href: "/chat", icon: MessageCircle },
+    { name: "Asisten", href: "/chat", icon: MessageCircle, beta: true },
     { name: "Tiket Divisi", href: "/department/tickets", icon: Building2 },
     { name: "Tiket Saya", href: "/tickets", icon: Ticket },
     { name: "Buat Tiket", href: "/tickets/new", icon: PlusCircle },
@@ -64,11 +64,13 @@ const navigation = {
   ],
 };
 
+type NavItem = { name: string; href: string; icon: React.ElementType; beta?: boolean };
+
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = (session?.user?.role as keyof typeof navigation) || "USER";
-  const items = navigation[role] || navigation.USER;
+  const items = (navigation[role] || navigation.USER) as NavItem[];
 
   return (
     <div className="flex h-full flex-col border-r border-[#E2E8F0] bg-white">
@@ -121,7 +123,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               >
                 <item.icon className="h-4 w-4" />
               </div>
-              {item.name}
+              <span className="flex items-start gap-1">
+                {item.name}
+                {item.beta && (
+                  <sup className="text-[9px] font-bold text-red-500 leading-none mt-0.5">Beta</sup>
+                )}
+              </span>
             </Link>
           );
         })}

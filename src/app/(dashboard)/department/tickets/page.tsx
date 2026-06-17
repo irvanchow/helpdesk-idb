@@ -73,6 +73,7 @@ export default function DepartmentTicketsPage() {
       if (priorityFilter) params.append("priority", priorityFilter);
       if (search) params.append("search", search);
 
+      params.append("scope", "department");
       const res = await fetch(`/api/tickets?${params}`);
       if (res.ok) {
         const data = await res.json();

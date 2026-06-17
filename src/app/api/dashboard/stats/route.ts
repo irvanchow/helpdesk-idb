@@ -16,38 +16,16 @@ export async function GET() {
     if (role === "ADMIN") {
       // Admin sees all
     } else if (role === "AGENT") {
-      const deptUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { department: true },
-      });
-      if (deptUser?.department) {
-        baseWhere = {
-          OR: [
-            { assignedToId: userId },
-            { createdById: userId },
-            { category: { department: deptUser.department } },
-          ],
-        };
-      } else {
-        baseWhere = { OR: [{ assignedToId: userId }, { createdById: userId }] };
-      }
+      baseWhere = { assignedToId: userId };
     } else if (role === "SUPERVISOR") {
       const deptUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { department: true },
       });
       if (deptUser?.department) {
-        baseWhere = {
-          OR: [
-            { assignedToId: userId },
-            { createdById: userId },
-            { category: { department: deptUser.department } },
-          ],
-        };
+        baseWhere = { category: { department: deptUser.department } };
       } else {
-        baseWhere = {
-          OR: [{ assignedToId: userId }, { createdById: userId }],
-        };
+        baseWhere = { assignedToId: userId };
       }
     } else {
       baseWhere = { OR: [{ createdById: userId }, { onBehalfOfId: userId }] };

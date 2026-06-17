@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AgentPerformanceChart, type AgentPerformance } from "@/components/dashboard/agent-performance-chart";
 import {
   Ticket,
   Clock,
@@ -13,6 +15,7 @@ import {
   Zap,
   BarChart3,
   ArrowUpRight,
+  Users,
 } from "lucide-react";
 
 interface Stats {
@@ -33,6 +36,7 @@ const statCards = [
     color: "#2563EB",
     bgLight: "bg-blue-50",
     textColor: "text-blue-600",
+    href: "/tickets",
   },
   {
     key: "open" as const,
@@ -41,6 +45,7 @@ const statCards = [
     color: "#F97316",
     bgLight: "bg-orange-50",
     textColor: "text-orange-600",
+    href: "/tickets?status=OPEN",
   },
   {
     key: "inProgress" as const,
@@ -49,6 +54,7 @@ const statCards = [
     color: "#F59E0B",
     bgLight: "bg-amber-50",
     textColor: "text-amber-600",
+    href: "/tickets?status=IN_PROGRESS",
   },
   {
     key: "resolved" as const,
@@ -57,6 +63,7 @@ const statCards = [
     color: "#10B981",
     bgLight: "bg-emerald-50",
     textColor: "text-emerald-600",
+    href: "/tickets?status=RESOLVED",
   },
 ];
 
@@ -64,10 +71,20 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [agentPerformance, setAgentPerformance] = useState<AgentPerformance[]>([]);
 
   useEffect(() => {
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    if (session?.user?.role === "SUPERVISOR") {
+      fetch("/api/dashboard/agent-performance")
+        .then((r) => r.json())
+        .then((data) => setAgentPerformance(data))
+        .catch(() => {});
+    }
+  }, [session]);
 
   const fetchStats = async () => {
     try {
@@ -131,31 +148,41 @@ export default function DashboardPage() {
         {statCards.map((card) => {
           const Icon = card.icon;
           const value = stats[card.key];
+          const isClickable = value > 0;
           return (
-            <Card
+            <Link
               key={card.key}
-              className="group border border-[#E2E8F0] bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5"
+              href={isClickable ? card.href : "#"}
+              className={isClickable ? "block" : "block pointer-events-none"}
             >
-              <CardHeader className="flex flex-row items-center justify-between pb-2 pt-5 px-5">
-                <CardTitle className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-                  {card.label}
-                </CardTitle>
-                <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${card.bgLight}`}
-                >
-                  <Icon className={`h-5 w-5 ${card.textColor}`} />
-                </div>
-              </CardHeader>
-              <CardContent className="pb-5 px-5">
-                <div className="text-2xl font-bold tracking-tight text-[#1E293B]">
-                  {value}
-                </div>
-                <div className="mt-2 flex items-center text-xs text-[#94A3B8]">
-                  <ArrowUpRight className="mr-1 h-3 w-3" />
-                  Tiket aktif
-                </div>
-              </CardContent>
-            </Card>
+              <Card
+                className={`group border border-[#E2E8F0] bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 ${
+                  isClickable
+                    ? "hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 cursor-pointer"
+                    : "opacity-60 cursor-not-allowed"
+                }`}
+              >
+                <CardHeader className="flex flex-row items-center justify-between pb-2 pt-5 px-5">
+                  <CardTitle className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                    {card.label}
+                  </CardTitle>
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${card.bgLight}`}
+                  >
+                    <Icon className={`h-5 w-5 ${card.textColor}`} />
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-5 px-5">
+                  <div className="text-2xl font-bold tracking-tight text-[#1E293B]">
+                    {value}
+                  </div>
+                  <div className="mt-2 flex items-center text-xs text-[#94A3B8]">
+                    <ArrowUpRight className="mr-1 h-3 w-3" />
+                    Tiket aktif
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </div>
@@ -206,6 +233,33 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Agent Performance - Supervisor only */}
+      {role === "SUPERVISOR" && (
+        <Card className="border border-[#E2E8F0] bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden">
+          <div className="h-1 bg-[#2563EB]" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-5 px-5">
+            <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+              Agent Performance
+            </CardTitle>
+            <span className="text-xs text-[#94A3B8]">
+              Bulan {new Date().toLocaleString("id-ID", { month: "long", year: "numeric" })}
+            </span>
+          </CardHeader>
+          <CardContent className="pb-5 px-5">
+            {agentPerformance.length === 0 ? (
+              <div className="flex h-32 items-center justify-center text-sm text-[#94A3B8]">
+                Belum ada data agent bulan ini
+              </div>
+            ) : (
+              <AgentPerformanceChart data={agentPerformance} />
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Quick Info */}

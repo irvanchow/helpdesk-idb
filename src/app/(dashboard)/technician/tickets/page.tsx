@@ -68,6 +68,7 @@ export default function TechnicianTicketsPage() {
       if (statusFilter) params.append("status", statusFilter);
       if (search) params.append("search", search);
 
+      params.append("scope", "department");
       const res = await fetch(`/api/tickets?${params}`);
       if (res.ok) {
         const data = await res.json();

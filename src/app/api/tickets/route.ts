@@ -33,50 +33,32 @@ export async function GET(req: NextRequest) {
 
     const userId = session.user.id;
     const role = session.user.role;
+    const scope = searchParams.get("scope"); // "my" | "department" | null
 
     let where: any = {};
 
-    if (role === "ADMIN" || role === "EXECUTIVE") {
-      // Admin and Executive see all tickets
-    } else if (role === "AGENT") {
-      // Agent sees: tickets in their department's categories + assigned to them + created by them
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { department: true },
-      });
-      if (user?.department) {
-        where = {
-          OR: [
-            { assignedToId: userId },
-            { createdById: userId },
-            { category: { department: user.department } },
-          ],
-        };
+    if (role === "ADMIN") {
+      // Admin sees all tickets
+    } else if (role === "AGENT" || role === "SUPERVISOR") {
+      if (scope === "department") {
+        // Tiket Divisi: semua tiket yang masuk ke divisi user
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { department: true },
+        });
+        if (user?.department) {
+          where = { category: { department: user.department } };
+        } else {
+          where = { assignedToId: userId };
+        }
       } else {
+        // Tiket Saya: tiket yang dibuat atau di-assign ke user
         where = {
-          OR: [{ assignedToId: userId }, { createdById: userId }],
-        };
-      }
-    } else if (role === "SUPERVISOR") {
-      // Supervisor sees all tickets in their department's categories
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { department: true },
-      });
-      if (user?.department) {
-        where = {
-          OR: [
-            { assignedToId: userId },
-            { createdById: userId },
-            { category: { department: user.department } },
-          ],
-        };
-      } else {
-        where = {
-          OR: [{ assignedToId: userId }, { createdById: userId }],
+          OR: [{ createdById: userId }, { assignedToId: userId }, { onBehalfOfId: userId }],
         };
       }
     } else {
+      // USER & EXECUTIVE: hanya tiket yang dibuat sendiri
       where = {
         OR: [{ createdById: userId }, { onBehalfOfId: userId }],
       };
