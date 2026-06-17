@@ -37,11 +37,18 @@ export async function GET() {
 
     const performance = await Promise.all(
       agents.map(async (agent) => {
-        const [ticketCount, ratedTickets] = await Promise.all([
+        const [ticketCount, resolvedCount, ratedTickets] = await Promise.all([
           prisma.ticket.count({
             where: {
               assignedToId: agent.id,
               createdAt: { gte: startOfMonth, lt: endOfMonth },
+            },
+          }),
+          prisma.ticket.count({
+            where: {
+              assignedToId: agent.id,
+              createdAt: { gte: startOfMonth, lt: endOfMonth },
+              status: { in: ["RESOLVED", "CLOSED"] },
             },
           }),
           prisma.ticket.findMany({
@@ -55,20 +62,18 @@ export async function GET() {
           }),
         ]);
 
-        const avgRating =
-          ratedTickets.length > 0
-            ? Math.round(
-                (ratedTickets.reduce((sum, t) => sum + (t.rating ?? 0), 0) /
-                  ratedTickets.length) *
-                  10
-              ) / 10
-            : null;
+        // Distribusi rating 1-5
+        const ratingDistribution = [5, 4, 3, 2, 1].map((star) => ({
+          star,
+          count: ratedTickets.filter((t) => t.rating === star).length,
+        }));
 
         return {
           agentId: agent.id,
           agentName: agent.name,
           ticketCount,
-          avgRating,
+          resolvedCount,
+          ratingDistribution,
         };
       })
     );
