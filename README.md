@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Helpdesk IDB Bali
 
-## Getting Started
+Sistem helpdesk dan support ticket untuk civitas akademika Institut Desain dan Bisnis Bali. Memungkinkan mahasiswa, dosen, dan staf mengajukan tiket dukungan IT dan layanan kampus, serta dilengkapi AI Asisten (Vira) berbasis RAG.
 
-First, run the development server:
+## Fitur
+
+### Tiket Support
+- Buat, lacak, dan kelola tiket dengan kategori hierarki 2 level
+- Auto-assign tiket ke supervisor berdasarkan departemen kategori
+- Status tiket: Open → In Progress → Resolved → Closed
+- Prioritas: Low, Medium, High, Urgent
+- Lampiran file (gambar, PDF, dokumen)
+- Komentar internal dan eksternal
+- Rating kepuasan setelah tiket selesai
+- SLA tracking (response time & resolve time)
+
+### Role & Akses
+| Role | Akses |
+|------|-------|
+| ADMIN | Semua fitur, manajemen user, laporan, KB Admin |
+| AGENT | Tiket divisi & tiket sendiri, dashboard performance |
+| SUPERVISOR | Tiket divisi, tiket sendiri, dashboard agent performance |
+| USER | Tiket sendiri, knowledge base, AI asisten |
+| EXECUTIVE | Monitor semua tiket, laporan |
+
+### Knowledge Base
+- Artikel dengan kategori dan tag
+- FAQ yang bisa dikelola admin
+- Dokumen internal (SOP, peraturan, panduan) — digunakan sebagai referensi AI
+
+### AI Asisten Vira
+- Chatbot helpdesk berbasis LLM (NVIDIA NIM)
+- RAG (Retrieval-Augmented Generation) menggunakan dokumen internal, KB, dan FAQ
+- Embedding via NVIDIA `nvidia/nv-embedqa-e5-v5`
+- Bisa membuat tiket langsung dari percakapan
+- Hanya menjawab dalam konteks helpdesk kampus
+
+### Dashboard
+- Statistik tiket per role (total, open, in progress, resolved)
+- Agent Performance chart untuk SUPERVISOR (tiket masuk vs selesai, rating distribusi)
+- Card statistik bisa diklik untuk filter tiket
+
+## Stack Teknologi
+
+- **Framework**: Next.js 16 (App Router, Turbopack)
+- **UI**: React 19, Tailwind CSS v4, Shadcn/ui
+- **Database**: SQLite (via Prisma ORM)
+- **Auth**: NextAuth v5 (credentials + Microsoft OAuth)
+- **AI**: NVIDIA NIM API (LLM + Embedding)
+- **File storage**: Local filesystem (`public/uploads/`)
+- **PDF parsing**: pdf-parse v1
+- **DOCX parsing**: mammoth
+
+## Setup Development
+
+### Prasyarat
+- Node.js 20+
+- npm
+
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/USERNAME/helpdesk-idb.git
+cd helpdesk-idb
+npm install
+```
+
+### 2. Buat file `.env`
+
+```env
+# Database
+DATABASE_URL="file:./dev.db"
+
+# NextAuth
+NEXTAUTH_SECRET="random-string-minimal-32-karakter"
+NEXTAUTH_URL="http://localhost:3000"
+
+# NVIDIA NIM (LLM + Embedding untuk AI Asisten)
+NVIDIA_API_KEY="nvapi-xxxxxxxxxxxx"
+NVIDIA_MODEL="meta/llama-3.1-8b-instruct"
+
+# Microsoft OAuth (opsional)
+# AUTH_MICROSOFT_ENTRA_ID_ID="client-id"
+# AUTH_MICROSOFT_ENTRA_ID_SECRET="client-secret"
+# AUTH_MICROSOFT_ENTRA_ID_TENANT_ID="tenant-id"
+```
+
+Generate `NEXTAUTH_SECRET`:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 3. Setup Database
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+npx prisma db seed
+```
+
+### 4. Jalankan Dev Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Akun Default (setelah seed)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Email | Password | Role |
+|-------|----------|------|
+| admin@idbbali.ac.id | admin123 | ADMIN |
+| tech1@idbbali.ac.id | tech123 | AGENT |
+| tech2@idbbali.ac.id | tech123 | AGENT |
+| kabag.keuangan@idbbali.ac.id | depthead123 | SUPERVISOR |
+| kabag.hrd@idbbali.ac.id | depthead123 | SUPERVISOR |
+| kabag.baa@idbbali.ac.id | depthead123 | SUPERVISOR |
+| dosen1@idbbali.ac.id | user123 | USER |
 
-## Learn More
+> Ganti semua password default sebelum go-live.
 
-To learn more about Next.js, take a look at the following resources:
+## Struktur Direktori
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/
+    (auth)/          # Login page
+    (dashboard)/     # Semua halaman setelah login
+      dashboard/     # Dashboard utama
+      tickets/       # Daftar & detail tiket
+      admin/         # Halaman admin (users, categories, KB, reports)
+      chat/          # AI Asisten Vira
+      kb/            # Knowledge Base
+    api/             # API routes
+  components/
+    ui/              # Shadcn components
+    layout/          # Shell, sidebar, header
+    chat/            # Chat widget
+    dashboard/       # Dashboard components (agent performance chart)
+  lib/
+    auth.ts          # NextAuth config
+    prisma.ts        # Prisma client
+    rag.ts           # RAG utilities (chunking, embedding, search)
+prisma/
+  schema.prisma      # Database schema
+  seed.ts            # Data seed
+  migrations/        # Migration files
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Panduan Deployment
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Lihat [DEPLOYMENT.md](./DEPLOYMENT.md) untuk panduan lengkap deploy ke VPS Ubuntu.

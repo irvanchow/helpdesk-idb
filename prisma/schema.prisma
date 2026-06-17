@@ -184,6 +184,30 @@ model KBArticleTag {
   @@id([articleId, tagId])
 }
 
+model InternalDoc {
+  id          String   @id @default(cuid())
+  title       String
+  category    String
+  fileName    String
+  fileUrl     String
+  content     String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  chunks      DocChunk[]
+}
+
+model DocChunk {
+  id          String      @id @default(cuid())
+  docId       String
+  doc         InternalDoc @relation(fields: [docId], references: [id], onDelete: Cascade)
+  chunkIndex  Int
+  content     String
+  embedding   String
+  createdAt   DateTime    @default(now())
+}
+
 model FAQ {
   id        String   @id @default(cuid())
   question  String

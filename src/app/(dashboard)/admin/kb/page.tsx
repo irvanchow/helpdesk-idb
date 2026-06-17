@@ -38,6 +38,8 @@ import {
   FolderPlus,
   AlertCircle,
   HelpCircle,
+  FileText,
+  Upload,
 } from "lucide-react";
 
 interface KBArticle {
@@ -94,11 +96,65 @@ export default function AdminKBPage() {
   const [faqOrder, setFaqOrder] = useState(0);
   const [faqSubmitting, setFaqSubmitting] = useState(false);
 
+  // Internal Doc state
+  interface InternalDocItem { id: string; title: string; category: string; fileName: string; fileUrl: string; createdAt: string; }
+  const [docs, setDocs] = useState<InternalDocItem[]>([]);
+  const [docDialogOpen, setDocDialogOpen] = useState(false);
+  const [docTitle, setDocTitle] = useState("");
+  const [docCategory, setDocCategory] = useState("SOP");
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docSubmitting, setDocSubmitting] = useState(false);
+
   useEffect(() => {
     fetchArticles();
     fetchCategories();
     fetchFaqs();
+    fetchDocs();
   }, []);
+
+  const fetchDocs = async () => {
+    try {
+      const res = await fetch("/api/admin/documents");
+      if (res.ok) setDocs(await res.json());
+    } catch {}
+  };
+
+  const handleDeleteDoc = async (id: string) => {
+    if (!confirm("Yakin ingin menghapus dokumen ini?")) return;
+    try {
+      const res = await fetch(`/api/admin/documents/${id}`, { method: "DELETE" });
+      if (res.ok) { toast.success("Dokumen berhasil dihapus"); fetchDocs(); }
+      else toast.error("Gagal menghapus dokumen");
+    } catch { toast.error("Terjadi kesalahan"); }
+  };
+
+  const handleSubmitDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docTitle.trim() || !docFile) {
+      toast.error("Judul dan file wajib diisi");
+      return;
+    }
+    setDocSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", docTitle.trim());
+      formData.append("category", docCategory);
+      formData.append("file", docFile);
+      const res = await fetch("/api/admin/documents", { method: "POST", body: formData });
+      if (res.ok) {
+        toast.success("Dokumen berhasil diupload");
+        setDocDialogOpen(false);
+        setDocTitle("");
+        setDocCategory("SOP");
+        setDocFile(null);
+        fetchDocs();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Gagal upload dokumen");
+      }
+    } catch { toast.error("Terjadi kesalahan"); }
+    finally { setDocSubmitting(false); }
+  };
 
   const fetchFaqs = async () => {
     try {
@@ -787,6 +843,98 @@ export default function AdminKBPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      {/* Dokumen Internal Section */}
+      <Card className="border border-[#E2E8F0] bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-5 px-5">
+          <CardTitle className="text-base font-semibold text-[#1E293B] flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50">
+              <FileText className="h-4 w-4 text-purple-600" />
+            </div>
+            Dokumen Internal
+          </CardTitle>
+          <Dialog open={docDialogOpen} onOpenChange={(open) => { setDocDialogOpen(open); if (!open) { setDocTitle(""); setDocCategory("SOP"); setDocFile(null); } }}>
+            <DialogTrigger className="h-9 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-sm font-semibold inline-flex items-center px-4 transition-colors">
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Dokumen
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Upload Dokumen Internal</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmitDoc} className="space-y-4 mt-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="doc-title">Judul Dokumen</Label>
+                  <Input
+                    id="doc-title"
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    placeholder="Contoh: SOP Pengajuan Akun SIAKAD"
+                    className="border-[#E2E8F0] rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="doc-category">Kategori</Label>
+                  <select
+                    id="doc-category"
+                    value={docCategory}
+                    onChange={(e) => setDocCategory(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-[#E2E8F0] px-3 text-sm bg-white text-[#1E293B] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                  >
+                    <option value="SOP">SOP</option>
+                    <option value="Peraturan">Peraturan</option>
+                    <option value="Panduan">Panduan</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="doc-file">File (PDF atau DOCX, maks. 10MB)</Label>
+                  <input
+                    id="doc-file"
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={(e) => setDocFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-[#64748B] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#2563EB] hover:file:bg-blue-100"
+                  />
+                  {docFile && <p className="text-xs text-[#64748B]">{docFile.name} ({(docFile.size / 1024).toFixed(0)} KB)</p>}
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" className="rounded-xl" onClick={() => setDocDialogOpen(false)}>Batal</Button>
+                  <Button type="submit" disabled={docSubmitting} className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {docSubmitting ? "Mengupload..." : "Upload"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent className="px-5 pb-5">
+          {docs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <FileText className="h-10 w-10 text-[#E2E8F0] mb-3" />
+              <p className="text-sm text-[#64748B] font-medium">Belum ada dokumen internal</p>
+              <p className="text-xs text-[#94A3B8] mt-1">Upload SOP, peraturan, atau panduan untuk digunakan AI Asisten</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#F1F5F9]">
+              {docs.map((doc) => (
+                <div key={doc.id} className="py-4 flex items-center gap-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-50">
+                    <FileText className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#1E293B] truncate">{doc.title}</p>
+                    <p className="text-xs text-[#94A3B8]">{doc.category} · {doc.fileName} · {new Date(doc.createdAt).toLocaleDateString("id-ID")}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-[#64748B] hover:text-red-600 shrink-0" onClick={() => handleDeleteDoc(doc.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>

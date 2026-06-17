@@ -42,15 +42,16 @@ export function ChatWidget() {
     },
   ];
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (typeof window === "undefined") return defaultMessages;
+  const [messages, setMessages] = useState<Message[]>(defaultMessages);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : defaultMessages;
-    } catch {
-      return defaultMessages;
-    }
-  });
+      if (saved) setMessages(JSON.parse(saved));
+    } catch {}
+    setHydrated(true);
+  }, []);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pendingTicket, setPendingTicket] = useState<PendingTicket | null>(null);

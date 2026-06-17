@@ -90,9 +90,11 @@ DATABASE_URL="file:./prisma/prod.db"
 NEXTAUTH_SECRET="isi-dengan-random-string"
 NEXTAUTH_URL="https://helpdesk.idbbali.ac.id"
 
-# NVIDIA NIM (Chatbot Vira)
+# NVIDIA NIM (Chatbot Vira — LLM + Embedding)
 NVIDIA_API_KEY="nvapi-xxxxxxxxxxxx"
 NVIDIA_MODEL="meta/llama-3.1-8b-instruct"
+# Model embedding diset otomatis ke nvidia/nv-embedqa-e5-v5
+# Rate limit tier gratis: 40 req/menit, 1.000 req/hari
 
 # Microsoft OAuth (opsional — hapus jika tidak dipakai)
 AUTH_MICROSOFT_ENTRA_ID_ID="client-id"
@@ -260,9 +262,42 @@ cd /var/www/helpdesk
 git pull origin master
 npm install
 npx prisma generate
+npx prisma migrate deploy
 npm run build
 pm2 restart helpdesk-idb
 ```
+
+> `npx prisma migrate deploy` diperlukan jika ada perubahan schema database (migration baru).
+
+---
+
+## Bagian 5 — Panduan Fitur AI Asisten Vira
+
+### 5.1 Cara Kerja RAG
+
+Vira menggunakan RAG (Retrieval-Augmented Generation) untuk menjawab berdasarkan dokumen internal:
+
+1. Admin upload dokumen (PDF/DOCX) di **KB Admin → Dokumen Internal**
+2. Sistem otomatis ekstrak teks dan potong jadi chunks (±150 kata per chunk)
+3. Setiap chunk di-embed menggunakan NVIDIA embedding API (background process)
+4. Saat user bertanya, pertanyaan di-embed lalu dicocokkan dengan chunks paling relevan
+5. Chunks relevan diinjek ke system prompt AI sebagai referensi jawaban
+
+### 5.2 Re-index Dokumen Lama
+
+Jika dokumen sudah ada sebelum fitur RAG ditambahkan, hapus dan upload ulang dokumen tersebut dari **KB Admin → Dokumen Internal** agar ter-index.
+
+### 5.3 Tips Upload Dokumen
+
+- **PDF teks** (bukan scan): teks terekstrak otomatis ✅
+- **PDF scan/gambar**: teks tidak terekstrak, gunakan versi teks ❌
+- **DOCX**: terekstrak otomatis ✅
+- Dokumen panjang akan di-index bertahap (1.5 detik per chunk) untuk menjaga rate limit NVIDIA
+- Rate limit tier gratis: 40 req/menit, 1.000 req/hari
+
+### 5.4 Manajemen FAQ
+
+FAQ bisa dikelola di **KB Admin → FAQ** tanpa perlu mengubah kode. FAQ aktif otomatis digunakan sebagai referensi AI Asisten.
 
 ---
 
@@ -271,11 +306,11 @@ pm2 restart helpdesk-idb
 | Email | Password | Role |
 |---|---|---|
 | admin@idbbali.ac.id | admin123 | ADMIN |
-| tech1@idbbali.ac.id | tech123 | IT_SUPPORT |
-| tech2@idbbali.ac.id | tech123 | IT_SUPPORT |
-| kabag.keuangan@idbbali.ac.id | depthead123 | DEPARTMENT_HEAD |
-| kabag.hrd@idbbali.ac.id | depthead123 | DEPARTMENT_HEAD |
-| kabag.baa@idbbali.ac.id | depthead123 | DEPARTMENT_HEAD |
+| tech1@idbbali.ac.id | tech123 | AGENT |
+| tech2@idbbali.ac.id | tech123 | AGENT |
+| kabag.keuangan@idbbali.ac.id | depthead123 | SUPERVISOR |
+| kabag.hrd@idbbali.ac.id | depthead123 | SUPERVISOR |
+| kabag.baa@idbbali.ac.id | depthead123 | SUPERVISOR |
 | dosen1@idbbali.ac.id | user123 | USER |
 
 > **Ganti semua password default sebelum go-live.**

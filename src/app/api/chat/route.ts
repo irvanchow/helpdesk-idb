@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { searchRelevantChunks } from "@/lib/rag";
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || "";
 const NVIDIA_MODEL = process.env.NVIDIA_MODEL || "meta/llama-3.1-70b-instruct";
@@ -35,29 +36,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch categories dan KB articles untuk context
-    const categories = await prisma.category.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, department: true },
-      orderBy: { name: "asc" },
-    });
+    // Ambil pesan terakhir user untuk RAG search
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content || "";
 
-    const kbArticles = await prisma.kBArticle.findMany({
-      where: { isPublished: true },
-      select: { id: true, title: true, slug: true, excerpt: true },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    });
+    // Fetch semua konteks untuk AI
+    const [categories, kbArticles, faqs, relevantChunks] = await Promise.all([
+      prisma.category.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, department: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.kBArticle.findMany({
+        where: { isPublished: true },
+        select: { id: true, title: true, slug: true, content: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      prisma.fAQ.findMany({
+        where: { isActive: true },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      }),
+      lastUserMessage
+        ? searchRelevantChunks(lastUserMessage, 5).catch(() => [])
+        : Promise.resolve([]),
+    ]);
 
-    // Build categories context — sertakan ID agar AI bisa pakai categoryId yang benar
+    // Build categories context
     const categoriesText = categories
       .map((c) => `- ID: ${c.id} | ${c.name}${c.department ? ` (${c.department})` : ""}`)
       .join("\n");
 
-    // Build KB articles context
-    const kbText = kbArticles
-      .map((a) => `- "${a.title}" (${a.slug}): ${a.excerpt || ""}`)
-      .join("\n");
+    // Build KB articles context (konten lengkap, truncate 1500 char)
+    const kbText = kbArticles.length > 0
+      ? kbArticles.map((a) =>
+          `### ${a.title}\n${a.content.substring(0, 1500)}${a.content.length > 1500 ? "..." : ""}`
+        ).join("\n---\n")
+      : "(belum ada artikel)";
+
+    // Build FAQ context
+    const faqText = faqs.length > 0
+      ? faqs.map((f) => `T: ${f.question}\nJ: ${f.answer}`).join("\n---\n")
+      : "(belum ada FAQ)";
+
+    // Build RAG context dari chunks relevan
+    const docsText = relevantChunks.length > 0
+      ? relevantChunks.map((c) =>
+          `### ${c.docTitle} (${c.docCategory})\n${c.content}`
+        ).join("\n---\n")
+      : "(tidak ada referensi dokumen relevan)";
 
     // System prompt
     const systemPrompt = `# IDENTITAS
@@ -119,8 +145,17 @@ Jika masalah sangat mendesak: "Kamu bisa langsung menghubungi Tim IT IDB Bali di
 KATEGORI TIKET YANG TERSEDIA (gunakan categoryId ini saat create_ticket):
 ${categoriesText}
 
-ARTIKEL KNOWLEDGE BASE (gunakan slug ini saat suggest_article):
+=== KNOWLEDGE BASE ===
 ${kbText}
+
+=== FAQ ===
+${faqText}
+
+=== DOKUMEN INTERNAL (SOP, Peraturan, Panduan) ===
+${docsText}
+
+# BATASAN TOPIK
+Jawab HANYA pertanyaan yang berkaitan dengan layanan helpdesk, IT support, dan operasional kampus IDB Bali. Jika pengguna bertanya di luar konteks ini (politik, hiburan, umum, dll), tolak dengan sopan: "Maaf, saya hanya bisa membantu dalam konteks layanan helpdesk dan IT support kampus IDB Bali. Ada yang bisa saya bantu terkait sistem atau layanan kampus?"
 
 # FORMAT RESPONS — WAJIB
 SELALU respond dalam format JSON valid. JANGAN gunakan markdown, backtick, atau teks di luar JSON.
