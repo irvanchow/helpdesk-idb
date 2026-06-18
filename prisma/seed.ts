@@ -160,8 +160,8 @@ async function main() {
       ],
     },
     {
-      name: "Marketing",
-      department: "Marketing",
+      name: "Humas & Marketing",
+      department: "Humas & Marketing",
       responseTimeHours: 24,
       resolveTimeHours: 72,
       children: [
