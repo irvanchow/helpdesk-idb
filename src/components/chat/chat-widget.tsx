@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -212,8 +213,19 @@ export function ChatWidget() {
       {/* Header */}
       <div className="border-b border-[#E2E8F0] bg-white px-6 py-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB]">
-            <span className="text-lg font-bold text-white">🤖</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB] overflow-hidden">
+            <Image
+              src="/images/vira.png"
+              alt="Vira"
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                (e.currentTarget.parentElement as HTMLElement).innerHTML =
+                  '<span class="text-lg font-bold text-white">🤖</span>';
+              }}
+            />
           </div>
           <div className="flex-1">
             <h1 className="text-lg font-bold text-[#1E293B]">
