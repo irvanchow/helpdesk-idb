@@ -106,6 +106,30 @@ async function main() {
     },
   });
 
+  const deptHeadPerpustakaan = await prisma.user.upsert({
+    where: { email: "kabag.perpustakaan@idbbali.ac.id" },
+    update: {},
+    create: {
+      name: "Kepala Perpustakaan",
+      email: "kabag.perpustakaan@idbbali.ac.id",
+      password: deptHeadPassword,
+      role: "SUPERVISOR",
+      department: "Perpustakaan",
+    },
+  });
+
+  const agentPerpustakaan = await prisma.user.upsert({
+    where: { email: "perpustakaan1@idbbali.ac.id" },
+    update: {},
+    create: {
+      name: "Staff Perpustakaan",
+      email: "perpustakaan1@idbbali.ac.id",
+      password: techPassword,
+      role: "AGENT",
+      department: "Perpustakaan",
+    },
+  });
+
   // Create regular user
   const userPassword = await bcrypt.hash("user123", 10);
   const user = await prisma.user.upsert({
@@ -214,6 +238,20 @@ async function main() {
       ],
     },
     {
+      name: "Perpustakaan",
+      department: "Perpustakaan",
+      responseTimeHours: 8,
+      resolveTimeHours: 48,
+      children: [
+        { name: "Keanggotaan Perpustakaan", description: "Pendaftaran anggota baru, perpanjangan kartu, status keanggotaan" },
+        { name: "Peminjaman & Pengembalian", description: "Peminjaman buku, perpanjangan, keterlambatan, denda, pengembalian" },
+        { name: "Reservasi & Ketersediaan Buku", description: "Pemesanan buku, status ketersediaan, antrian koleksi" },
+        { name: "Koleksi & Katalog", description: "Penambahan koleksi baru, katalog online, permintaan referensi" },
+        { name: "Ruang Baca & Fasilitas", description: "Booking ruang diskusi, kerusakan fasilitas, saran ruang baca" },
+        { name: "Layanan Digital & E-Resource", description: "Akses e-book, jurnal online, database penelitian, masalah login" },
+      ],
+    },
+    {
       name: "LP2M",
       department: "LP2M",
       responseTimeHours: 8,
@@ -293,7 +331,7 @@ async function main() {
   }
 
   console.log("Seed data created:");
-  console.log({ admin, tech1, tech2, user, deptHeadKeuangan, deptHeadHRD, deptHeadBAA, deptHeadKemahasiswaan, agentKemahasiswaan });
+  console.log({ admin, tech1, tech2, user, deptHeadKeuangan, deptHeadHRD, deptHeadBAA, deptHeadKemahasiswaan, agentKemahasiswaan, deptHeadPerpustakaan, agentPerpustakaan });
 }
 
 main()

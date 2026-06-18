@@ -318,6 +318,7 @@ export default function UsersPage() {
                     <SelectItem value="Kerjasama">Kerjasama</SelectItem>
                     <SelectItem value="HRD/Kepegawaian">HRD/Kepegawaian</SelectItem>
                     <SelectItem value="Operasional dan Security">Operasional dan Security</SelectItem>
+                    <SelectItem value="Perpustakaan">Perpustakaan</SelectItem>
                     <SelectItem value="Digital Communication">Digital Communication</SelectItem>
                     <SelectItem value="Penjamin Mutu">Penjamin Mutu</SelectItem>
                     <SelectItem value="Sistem Informasi & IT Support">Sistem Informasi & IT Support</SelectItem>
