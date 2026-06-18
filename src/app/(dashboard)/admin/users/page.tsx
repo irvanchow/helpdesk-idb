@@ -312,7 +312,9 @@ export default function UsersPage() {
                   <SelectContent className="max-h-72 min-w-[280px]">
                     <SelectItem value="BAA/Akademik">BAA/Akademik</SelectItem>
                     <SelectItem value="Keuangan">Keuangan</SelectItem>
-                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="Kemahasiswaan">Kemahasiswaan</SelectItem>
+                    <SelectItem value="LP2M">LP2M</SelectItem>
+                    <SelectItem value="Humas & Marketing">Humas & Marketing</SelectItem>
                     <SelectItem value="Kerjasama">Kerjasama</SelectItem>
                     <SelectItem value="HRD/Kepegawaian">HRD/Kepegawaian</SelectItem>
                     <SelectItem value="Operasional dan Security">Operasional dan Security</SelectItem>

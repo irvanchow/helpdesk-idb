@@ -82,6 +82,30 @@ async function main() {
     },
   });
 
+  const deptHeadKemahasiswaan = await prisma.user.upsert({
+    where: { email: "kabag.kemahasiswaan@idbbali.ac.id" },
+    update: {},
+    create: {
+      name: "Kepala Kemahasiswaan",
+      email: "kabag.kemahasiswaan@idbbali.ac.id",
+      password: deptHeadPassword,
+      role: "SUPERVISOR",
+      department: "Kemahasiswaan",
+    },
+  });
+
+  const agentKemahasiswaan = await prisma.user.upsert({
+    where: { email: "kemahasiswaan1@idbbali.ac.id" },
+    update: {},
+    create: {
+      name: "Staff Kemahasiswaan",
+      email: "kemahasiswaan1@idbbali.ac.id",
+      password: techPassword,
+      role: "AGENT",
+      department: "Kemahasiswaan",
+    },
+  });
+
   // Create regular user
   const userPassword = await bcrypt.hash("user123", 10);
   const user = await prisma.user.upsert({
@@ -190,6 +214,33 @@ async function main() {
       ],
     },
     {
+      name: "LP2M",
+      department: "LP2M",
+      responseTimeHours: 8,
+      resolveTimeHours: 48,
+      children: [
+        { name: "Penelitian Internal", description: "Proposal penelitian dosen, hibah internal, pengajuan dana riset" },
+        { name: "Pengabdian Masyarakat", description: "Program PKM, pendampingan desa, laporan kegiatan pengabdian" },
+        { name: "Publikasi & Jurnal", description: "Pendampingan submit jurnal, penerbitan prosiding, HAKI" },
+        { name: "Hibah Eksternal", description: "Informasi hibah Dikti/Kemenristek, pendampingan proposal, pelaporan" },
+        { name: "Etika & Regulasi Penelitian", description: "Persetujuan etik penelitian, pedoman riset, regulasi publikasi" },
+      ],
+    },
+    {
+      name: "Kemahasiswaan",
+      department: "Kemahasiswaan",
+      responseTimeHours: 8,
+      resolveTimeHours: 48,
+      children: [
+        { name: "Organisasi & UKM", description: "Pendaftaran UKM, perizinan kegiatan organisasi mahasiswa, pengurus" },
+        { name: "Beasiswa Eksternal", description: "Informasi beasiswa pemerintah/swasta, pendampingan berkas, seleksi" },
+        { name: "Kegiatan Kemahasiswaan", description: "Proposal kegiatan, anggaran, laporan pertanggungjawaban acara" },
+        { name: "Prestasi & Kompetisi", description: "Pendaftaran lomba, pendampingan delegasi, rekap prestasi mahasiswa" },
+        { name: "Konseling & Kesejahteraan", description: "Layanan konseling mahasiswa, masalah kesejahteraan, aduan sosial" },
+        { name: "Surat Keterangan Kemahasiswaan", description: "Surat aktif organisasi, rekomendasi kegiatan, keterangan non-beasiswa" },
+      ],
+    },
+    {
       name: "Sistem Informasi & IT Support",
       department: "Sistem Informasi & IT Support",
       responseTimeHours: 4,
@@ -242,7 +293,7 @@ async function main() {
   }
 
   console.log("Seed data created:");
-  console.log({ admin, tech1, tech2, user, deptHeadKeuangan, deptHeadHRD, deptHeadBAA });
+  console.log({ admin, tech1, tech2, user, deptHeadKeuangan, deptHeadHRD, deptHeadBAA, deptHeadKemahasiswaan, agentKemahasiswaan });
 }
 
 main()

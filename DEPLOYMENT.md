@@ -311,6 +311,8 @@ FAQ bisa dikelola di **KB Admin → FAQ** tanpa perlu mengubah kode. FAQ aktif o
 | kabag.keuangan@idbbali.ac.id | depthead123 | SUPERVISOR |
 | kabag.hrd@idbbali.ac.id | depthead123 | SUPERVISOR |
 | kabag.baa@idbbali.ac.id | depthead123 | SUPERVISOR |
+| kabag.kemahasiswaan@idbbali.ac.id | depthead123 | SUPERVISOR |
+| kemahasiswaan1@idbbali.ac.id | tech123 | AGENT |
 | dosen1@idbbali.ac.id | user123 | USER |
 
 > **Ganti semua password default sebelum go-live.**
